@@ -74,7 +74,7 @@ defmodule ElixirSense.Evaltest do
           def(stop(_state)) do
             :ok
           end
-          defoverridable(Application)
+          defoverridable(stop: 1)
         )
       )
       """ |> String.trim
@@ -84,12 +84,8 @@ defmodule ElixirSense.Evaltest do
         (
           require(Application)
           (
-            @behaviour(Application)
-            @doc(false)
-            def(stop(_state)) do
-              :ok
-            end
-            Module.make_overridable(MyModule, Application)
+            Module.put_attribute(MyModule, :behaviour, Application, nil, nil)
+            Module.put_attribute(MyModule, :doc, {0, false}, [{MyModule, :__MODULE__, 0, [file: "lib/elixir_sense/providers/expand.ex", line: 0]}], nil)
         """ |> String.trim
       else
         assert result.expand_all =~ """

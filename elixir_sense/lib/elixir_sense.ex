@@ -63,7 +63,7 @@ defmodule ElixirSense do
       ...> '''
       iex> {path, line} = ElixirSense.definition(code, 3, 11)
       iex> "#{Path.basename(path)}:#{to_string(line)}"
-      "enum.ex:2576"
+      "enum.ex:2523"
   """
   @spec definition(String.t, pos_integer, pos_integer) :: Definition.location
   def definition(code, line, column) do
@@ -76,26 +76,6 @@ defmodule ElixirSense do
     } = Metadata.get_env(buffer_file_metadata, line)
 
     Definition.find(subject, imports, aliases, module)
-  end
-
-  @doc ~S"""
-  Returns a sorted list of all available modules
-
-  ## Example
-
-      iex> ElixirSense.all_modules() |> Enum.take(4)
-      [":application", ":application_controller", ":application_master", ":application_starter"]
-
-      iex> ElixirSense.all_modules() |> Enum.take(-4)
-      ["Version.InvalidVersionError", "Version.Parser", "Version.Requirement", "WithClauseError"]
-
-  """
-  def all_modules do
-    Introspection.all_modules()
-    |> Enum.map(&Atom.to_string(&1))
-    |> Enum.map(fn x -> if String.downcase(x) == x do ":" <> x else x end end)
-    |> Enum.map(&String.replace_prefix(&1, "Elixir.", ""))
-    |> Enum.sort()
   end
 
   @doc """

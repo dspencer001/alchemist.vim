@@ -16,7 +16,7 @@ defmodule ElixirSense.Server.RequestHandler do
 
   def handle_request("definition", %{"buffer" => buffer, "line" => line, "column" => column}) do
     case ElixirSense.definition(buffer, line, column) do
-      {"non_existing", nil} -> "non_existing:0"
+      {"non_existing", nil} -> "non_existing"
       {file, nil}  -> "#{file}:0"
       {file, line} -> "#{file}:#{line}"
     end
@@ -38,19 +38,8 @@ defmodule ElixirSense.Server.RequestHandler do
     ElixirSense.match(code)
   end
 
-  def handle_request("all_modules", %{}) do
-    ElixirSense.all_modules()
-  end
-
   def handle_request("set_context", %{"env" => env, "cwd" => cwd}) do
-    env |> ContextLoader.set_context(cwd) |> Tuple.to_list()
-  end
-
-  def handle_request("version", %{}) do
-    %{
-      elixir: System.version,
-      otp: System.otp_release
-    }
+    ContextLoader.set_context(env, cwd) |> Tuple.to_list
   end
 
   def handle_request(request, payload) do

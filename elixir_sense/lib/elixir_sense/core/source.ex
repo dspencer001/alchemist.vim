@@ -1,15 +1,12 @@
 defmodule ElixirSense.Core.Source do
-  @moduledoc """
-  Source parsing
-  """
 
   @empty_graphemes [" ", "\n", "\r\n"]
   @stop_graphemes ~w/{ } ( ) [ ] < > + - * & ^ , ; ~ % = " ' \\ \/ $ ! ?`#/ ++ @empty_graphemes
 
   def prefix(code, line, col) do
-    line = code |> String.split("\n") |> Enum.at(line - 1)
-    line_str = line |> String.slice(0, col - 1)
-    case Regex.run(Regex.recompile!(~r/[\w0-9\._!\?\:@]+$/), line_str) do
+    line = code |> String.split("\n") |> Enum.at(line-1)
+    line_str = line |> String.slice(0, col-1)
+    case Regex.run(~r/[\w0-9\._!\?\:@]+$/, line_str) do
       nil -> ""
       [prefix] -> prefix
     end
@@ -97,7 +94,7 @@ defmodule ElixirSense.Core.Source do
 
   def which_func(prefix) do
     tokens =
-      case prefix |> String.to_charlist |> :elixir_tokenizer.tokenize(1, []) do
+      case prefix |> String.to_char_list |> :elixir_tokenizer.tokenize(1, []) do
         {:ok, _, _, tokens} ->
           tokens |> Enum.reverse
         {:error, {_line, _error_prefix, _token}, _rest, sofar} ->
@@ -107,8 +104,8 @@ defmodule ElixirSense.Core.Source do
           # IO.inspect(:stderr, {:rest, rest}, [])
           sofar
       end
-    pattern = %{npar: 0, count: 0, count2: 0, candidate: [], pos: nil, pipe_before: false}
-    result = scan(tokens, pattern)
+
+    result = scan(tokens, %{npar: 0, count: 0, count2: 0, candidate: [], pos: nil, pipe_before: false })
     %{candidate: candidate, npar: npar, pipe_before: pipe_before, pos: pos} = result
 
     %{
@@ -157,8 +154,7 @@ defmodule ElixirSense.Core.Source do
     scan(tokens, %{state | candidate: [value|state.candidate], pos: update_pos(pos, state.pos)})
   end
   defp scan([{:aliases, pos, [value]}|tokens], %{count: 1} = state) do
-    updated_pos = update_pos(pos, state.pos)
-    scan(tokens, %{state | candidate: [Module.concat([value])|state.candidate], pos: updated_pos})
+    scan(tokens, %{state | candidate: [Module.concat([value])|state.candidate], pos: update_pos(pos, state.pos)})
   end
   defp scan([{:atom, pos, value}|tokens], %{count: 1} = state) do
     scan(tokens, %{state | candidate: [value|state.candidate], pos: update_pos(pos, state.pos)})

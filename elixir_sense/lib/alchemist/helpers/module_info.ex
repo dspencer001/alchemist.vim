@@ -16,8 +16,7 @@ defmodule Alchemist.Helpers.ModuleInfo do
 
   def expand_alias([name | rest] = list, aliases) do
     module = Module.concat(Elixir, name)
-    aliases
-    |> Enum.find_value(list, fn {alias, mod} ->
+    Enum.find_value(aliases, list, fn {alias, mod} ->
       if alias === module do
         case Atom.to_string(mod) do
           "Elixir." <> mod ->
@@ -26,8 +25,7 @@ defmodule Alchemist.Helpers.ModuleInfo do
             mod
         end
       end
-    end)
-    |> normalize_module
+    end) |> normalize_module
   end
 
   def get_functions(module, hint) do
@@ -41,9 +39,8 @@ defmodule Alchemist.Helpers.ModuleInfo do
         false -> [{f, [a]}|acc]
       end
     end
-    list
-    |> do_get_functions(hint)
-    |> :lists.sort()
+
+    do_get_functions(list, hint) |> :lists.sort()
   end
 
   def has_function?(module, function) do
@@ -61,10 +58,7 @@ defmodule Alchemist.Helpers.ModuleInfo do
   defp get_module_funs(module) do
     case Code.ensure_loaded(module) do
       {:module, _} ->
-        (:functions
-        |> module.module_info()
-        |> filter_module_funs)
-        ++ module.__info__(:macros)
+        (module.module_info(:functions) |> filter_module_funs) ++ module.__info__(:macros)
       _otherwise ->
         []
     end

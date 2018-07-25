@@ -1,11 +1,10 @@
 defmodule ElixirSense.Mixfile do
-  @moduledoc false
   use Mix.Project
 
   def project do
     [app: :elixir_sense,
-     version: "1.0.1",
-     elixir: "~> 1.5",
+     version: "0.1.0",
+     elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      test_coverage: [tool: ExCoveralls],
@@ -27,7 +26,6 @@ defmodule ElixirSense.Mixfile do
   defp deps do
     [{:excoveralls, "~> 0.6", only: :test},
     {:dialyxir, "~> 0.4", only: [:dev]},
-    {:credo, "~> 0.8.4", only: [:dev]},
     {:ex_doc, "~> 0.14", only: [:dev]}]
   end
 
@@ -45,7 +43,7 @@ defmodule ElixirSense.Mixfile do
 
   defp package do
     [maintainers: ["Marlus Saraiva (@msaraiva)"],
-     licenses: ["MIT"],
+     licenses: ["Apache 2.0"],
      links: %{"GitHub" => "https://github.com/msaraiva/elixir_sense"}]
   end
 

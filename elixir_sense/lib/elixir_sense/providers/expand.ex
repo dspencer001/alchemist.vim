@@ -17,7 +17,7 @@ defmodule ElixirSense.Providers.Expand do
   Returns a map containing the results of all different code expansion methods
   available (expand_once, expand, expand_partial and expand_all).
   """
-  @spec expand_full(String.t, [module], [module], module) :: expanded_code_map
+  @spec expand_full(String.t, [module], [module], module) :: expanded_code_map | {:error, any}
   def expand_full(code, requires, imports, module) do
     env =
       __ENV__
@@ -28,20 +28,13 @@ defmodule ElixirSense.Providers.Expand do
     try do
       {_, expr} = code |> Code.string_to_quoted
       %{
-        expand_once:    expr |> Macro.expand_once(env)  |> Macro.to_string,
-        expand:         expr |> Macro.expand(env)       |> Macro.to_string,
-        expand_partial: expr |> Ast.expand_partial(env) |> Macro.to_string,
-        expand_all:     expr |> Ast.expand_all(env)     |> Macro.to_string,
+        expand_once: Macro.expand_once(expr, env) |> Macro.to_string,
+        expand:  Macro.expand(expr, env) |> Macro.to_string,
+        expand_partial: Ast.expand_partial(expr, env) |> Macro.to_string,
+        expand_all: Ast.expand_all(expr, env) |> Macro.to_string,
       }
     rescue
-      e ->
-        message = inspect(e)
-        %{
-          expand_once: message,
-          expand: message,
-          expand_partial: message,
-          expand_all: message,
-        }
+      e -> {:error, e}
     end
   end
 end

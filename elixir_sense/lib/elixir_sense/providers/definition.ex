@@ -38,24 +38,22 @@ defmodule ElixirSense.Providers.Definition do
         source -> List.to_string(source)
       end
     end
-    {file, exists?} = if file do
-      {file, File.exists?(file)}
+    file = if file && File.exists?(file) do
+      file
     else
-      erl_file = module |> :code.which |> to_string |> String.replace(Regex.recompile!(~r/(.+)\/ebin\/([^\s]+)\.beam$/), "\\1/src/\\2.erl")
-      {erl_file, File.exists?(erl_file)}
+      erl_file = module |> :code.which |> to_string |> String.replace(~r/(.+)\/ebin\/([^\s]+)\.beam$/, "\\1/src/\\2.erl")
+      if File.exists?(erl_file) do
+        erl_file
+      end
     end
-    {module, file, exists?}
+    {module, file}
   end
 
-  defp find_fun_line({_, file, _}, _fun) when file in ["non_existing", nil, ""] do
+  defp find_fun_line({_, file}, _fun) when file in ["non_existing", nil, ""] do
     {"non_existing", nil}
   end
 
-  defp find_fun_line({_mod, file, false}, _fun) do
-    {file, -1}
-  end
-
-  defp find_fun_line({mod, file, _}, fun) do
+  defp find_fun_line({mod, file}, fun) do
     line = if String.ends_with?(file, ".erl") do
       find_fun_line_in_erl_file(file, fun)
     else
@@ -71,7 +69,7 @@ defmodule ElixirSense.Providers.Definition do
       file
       |> File.read!
       |> String.split(["\n", "\r\n"])
-      |> Enum.find_index(&String.match?(&1, Regex.recompile!(~r/^#{fun_name}\b/)))
+      |> Enum.find_index(&String.match?(&1, ~r/^#{fun_name}\b/))
 
     (index || 0) + 1
   end

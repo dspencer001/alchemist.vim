@@ -1,7 +1,4 @@
 defmodule ElixirSense.Server.TCPServer do
-  @moduledoc """
-  TCP Server connection endpoint
-  """
   use Bitwise
 
   alias ElixirSense.Server.{RequestHandler, ContextLoader}
@@ -15,7 +12,6 @@ defmodule ElixirSense.Server.TCPServer do
     children = [
       worker(Task, [__MODULE__, :listen, [socket_type, "localhost", port]]),
       supervisor(Task.Supervisor, [[name: @connection_handler_supervisor]]),
-      worker(SelfDestructTimer, [env]),
       worker(ContextLoader, [env])
     ]
 
@@ -46,15 +42,13 @@ defmodule ElixirSense.Server.TCPServer do
   defp format_output("tcpip", host, port, auth_token) do
     "ok:#{host}:#{port}:#{auth_token}"
   end
-
   defp format_output("unix", host, file, _auth_token) do
     "ok:#{host}:#{file}"
   end
 
   defp listen_options("tcpip", port) do
-    {String.to_integer(port), @default_listen_options ++ [ip: {127, 0, 0, 1}]}
+    {String.to_integer(port), @default_listen_options ++ [ip: {127,0,0,1}]}
   end
-
   defp listen_options("unix", _port) do
     {0, @default_listen_options ++ [ifaddr: {:local, socket_file()}]}
   end
@@ -74,7 +68,6 @@ defmodule ElixirSense.Server.TCPServer do
   end
 
   defp connection_handler(socket, auth_token) do
-    SelfDestructTimer.reset
     case :gen_tcp.recv(socket, 0) do
       {:error, :closed} ->
         IO.puts :stderr, "Client socket is closed"
@@ -87,43 +80,26 @@ defmodule ElixirSense.Server.TCPServer do
   end
 
   defp process_request(data, auth_token) do
-    with \
-      {:ok, decoded_data} <- decode_request_data(data),
-      {:ok, result} <- dispatch_request(decoded_data, auth_token)
-    do
-      :erlang.term_to_binary(result)
-    else
-      {:invalid_request, message} ->
-        IO.puts(:stderr, "Server Error: #{message}")
-        :erlang.term_to_binary(%{request_id: nil, payload: nil, error: message})
-      {:error, request_id, exception} ->
-        IO.puts(:stderr, "Server Error: \n" <> Exception.message(exception) <> "\n" <> Exception.format_stacktrace(System.stacktrace))
-        :erlang.term_to_binary(%{request_id: request_id, payload: nil, error: Exception.message(exception)})
-    end
-  end
-
-  defp dispatch_request(%{
-    "request_id" => request_id,
-    "auth_token" => req_token,
-    "request" => request,
-    "payload" => payload}, auth_token) do
     try do
-      result =
-        if secure_compare(auth_token, req_token) do
-          ContextLoader.reload()
-          payload = RequestHandler.handle_request(request, payload)
-          %{request_id: request_id, payload: payload, error: nil}
-        else
-          %{request_id: request_id, payload: nil, error: "unauthorized"}
-        end
-      {:ok, result}
+      data
+      |> :erlang.binary_to_term()
+      |> dispatch_request(auth_token)
+      |> :erlang.term_to_binary()
     rescue
-      e -> {:error, request_id, e}
+      e ->
+        IO.puts(:stderr, "Server Error: \n" <> Exception.message(e) <> "\n" <> Exception.format_stacktrace(System.stacktrace))
+        :erlang.term_to_binary(%{request_id: nil, payload: nil, error: Exception.message(e)})
     end
   end
 
-  defp dispatch_request(_, _) do
-    {:invalid_request, "Invalid request"}
+  defp dispatch_request(%{ "request_id" => request_id, "auth_token" => req_token, "request" => request, "payload" => payload }, auth_token) do
+    if secure_compare(auth_token, req_token) do
+      ContextLoader.reload()
+      payload = RequestHandler.handle_request(request, payload)
+      %{request_id: request_id, payload: payload, error: nil }
+    else
+      %{request_id: request_id, payload: nil, error: "unauthorized" }
+    end
   end
 
   defp send_response(data, socket) do
@@ -135,28 +111,17 @@ defmodule ElixirSense.Server.TCPServer do
     String.to_charlist("/tmp/elixir-sense-#{sock_id}.sock")
   end
 
-  defp decode_request_data(data) do
-    try do
-      {:ok, :erlang.binary_to_term(data)}
-    rescue
-      _e ->
-        {:error, "Cannot decode request data. :erlang.binary_to_term/1 failed"}
-    end
-  end
-
   # Adapted from https://github.com/plackemacher/secure_compare/blob/master/lib/secure_compare.ex
   defp secure_compare(nil, nil), do: true
   defp secure_compare(a, b) when is_nil(a) or is_nil(b), do: false
   defp secure_compare(a, b) when byte_size(a) != byte_size(b), do: false
   defp secure_compare(a, b) when is_binary(a) and is_binary(b) do
-    a_list = String.to_charlist(a)
-    b_list = String.to_charlist(b)
+    a_list = String.to_char_list(a)
+    b_list = String.to_char_list(b)
     secure_compare(a_list, b_list)
   end
   defp secure_compare(a, b) when is_list(a) and is_list(b) do
-    res = a
-    |> Enum.zip(b)
-    |> Enum.reduce(0, fn({a_byte, b_byte}, acc) ->
+    res = Enum.zip(a, b) |> Enum.reduce(0, fn({a_byte, b_byte}, acc) ->
       acc ||| bxor(a_byte, b_byte)
     end)
     res == 0

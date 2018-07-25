@@ -97,10 +97,10 @@ defmodule ElixirSense.Providers.Suggestion do
 
     {hint_suggestion, suggestions} =
       case List.first(list2) do
-        %{type: :hint} = sug ->
-          {sug, list1 ++ List.delete_at(list2, 0)}
-        _ ->
+        sug when sug in [nil, ""] ->
           {%{type: :hint, value: "#{hint}"}, list1 ++ list2}
+        sug ->
+          {sug, list1 ++ List.delete_at(list2, 0)}
       end
 
     %{hint: hint_suggestion, suggestions: suggestions}
@@ -140,8 +140,8 @@ defmodule ElixirSense.Providers.Suggestion do
           hint == "" or String.starts_with?("#{name}", hint)
       do
         desc = Introspection.extract_summary_from_docs(doc)
-        [_, args_str] = Regex.run(Regex.recompile!(~r/.\((.*)\)/), signature)
-        args = args_str |> String.replace(Regex.recompile!(~r/\s/), "")
+        [_, args_str] = Regex.run(~r/.\((.*)\)/, signature)
+        args = args_str |> String.replace(~r/\s/, "")
         %{type: :callback, name: name, arity: arity, args: args, origin: mod_name, summary: desc, spec: spec}
       end
     end) |> Enum.sort
